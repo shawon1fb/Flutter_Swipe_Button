@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// A Widget that have the ability to detect swipe on itself
-/// with customizable variables.
 class SwipeableWidget extends StatefulWidget {
   /// The `Widget` on which we want to detect the swipe movement.
   final Widget child;
@@ -20,7 +18,7 @@ class SwipeableWidget extends StatefulWidget {
       @required this.child,
       @required this.height,
       @required this.onSwipeCallback,
-      this.swipePercentageNeeded = 0.75})
+      this.swipePercentageNeeded = 0.25})
       : assert(child != null &&
             onSwipeCallback != null &&
             swipePercentageNeeded <= 1.0),
@@ -35,7 +33,7 @@ class _SwipeableWidgetState extends State<SwipeableWidget>
   AnimationController _controller;
 
   var _dxStartPosition = 0.0;
-  var _dxEndsPosition = 0.0;
+  var _dxEndsPosition = 9999.0;
 
   var value = 1.0;
 
@@ -46,8 +44,8 @@ class _SwipeableWidgetState extends State<SwipeableWidget>
     _controller = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 300))
       ..addListener(() {
-        print(_controller.value);
-        value =1.0- _controller.value;
+        //  print("controller --> ${_controller.value}");
+        value = 1.0 - _controller.value;
         setState(() {});
       });
 
@@ -65,41 +63,54 @@ class _SwipeableWidgetState extends State<SwipeableWidget>
     return GestureDetector(
         onPanStart: (details) {
           setState(() {
-            // _dxStartPosition = details.localPosition.dx;
-            _dxEndsPosition = details.localPosition.dx;
-            print(" end pos --->$_dxEndsPosition");
+            _dxStartPosition = details.localPosition.dx;
           });
         },
         onPanUpdate: (details) {
           final widgetSize = context.size.width;
 
-          final minimumXToStartSwiping = widgetSize * 0.55;
-          if (_dxEndsPosition >= minimumXToStartSwiping) {
+          // will only animate the swipe if user start the swipe in the quarter half start page of the widget
+          final minimumXToStartSwiping = widgetSize * 0.75;
+
+          //  print("====>>_dxStartPosition :$_dxStartPosition");
+          //  print("===>>>>minimumXToStartSwiping : $minimumXToStartSwiping");
+          if (_dxStartPosition >= minimumXToStartSwiping) {
             setState(() {
-              //  _dxEndsPosition = details.localPosition.dx;
               _dxEndsPosition = details.localPosition.dx;
             });
 
+            // update the animation value according to user's pan update
             final widgetSize = context.size.width;
             _controller.value = 1 - ((details.localPosition.dx) / widgetSize);
           }
         },
         onPanEnd: (details) async {
           // checks if the right swipe that user has done is enough or not
-          //  final delta = _dxEndsPosition - _dxStartPosition;
+          // final delta = _dxEndsPosition - _dxStartPosition;
           final delta = _dxStartPosition - _dxEndsPosition;
           final widgetSize = context.size.width;
+          // final deltaNeededToBeSwiped = widgetSize * widget.swipePercentageNeeded;
           final deltaNeededToBeSwiped =
               widgetSize * widget.swipePercentageNeeded;
+
+          /*    print("start pos ----$_dxStartPosition");
+          print("end pos ----$_dxEndsPosition");
+
+          print("---->>>delta :   $delta");
+          print("---->>>deltaNeededToBeSwiped : $deltaNeededToBeSwiped");
+*/
           if (delta > deltaNeededToBeSwiped) {
             // if it's enough, then animate to hide them
-            _controller.animateTo(0.0,
-                duration: Duration(milliseconds: 300),
-                curve: Curves.fastOutSlowIn);
+            _controller
+                .animateTo(1.0,
+                    duration: Duration(milliseconds: 300),
+                    curve: Curves.fastOutSlowIn)
+                .whenComplete(() => null);
             widget.onSwipeCallback();
           } else {
             // if it's not enough, then animate it back to its full width
-            _controller.animateTo(1.0,
+            //  print("restored -->");
+            _controller.animateTo(0.0,
                 duration: Duration(milliseconds: 300),
                 curve: Curves.fastOutSlowIn);
           }
@@ -111,7 +122,8 @@ class _SwipeableWidgetState extends State<SwipeableWidget>
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: FractionallySizedBox(
-                  widthFactor: value, // _controller.value,
+                  widthFactor: value, // > 0.75 ? value : 0.60,
+                  //   widthFactor: _controller.value,
                   heightFactor: 1.0,
                   child: widget.child,
                 ),
@@ -120,12 +132,9 @@ class _SwipeableWidgetState extends State<SwipeableWidget>
   }
 }
 
-/// A Button that can detect swiping movement with shimmering arrows on far end.
 class SwipingButton extends StatelessWidget {
-  /// The text that the button will display.
   final String text;
 
-  /// The callback invoked when the button is swiped.
   final VoidCallback onSwipeCallback;
 
   SwipingButton({
@@ -144,11 +153,10 @@ class SwipingButton extends StatelessWidget {
           Container(
             height: 80.0,
             decoration: BoxDecoration(
-                color: Colors.greenAccent,
-                borderRadius: BorderRadius.circular(4.0)),
+                color: Colors.green, borderRadius: BorderRadius.circular(4.0)),
           ),
           SwipeableWidget(
-            height: 80.0,
+             height: 80.0,
             child: Container(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
@@ -156,9 +164,10 @@ class SwipingButton extends StatelessWidget {
               ),
               height: 80.0,
               decoration: BoxDecoration(
-                  color: Colors.green,
+                  color: Colors.red,
                   borderRadius: BorderRadius.circular(4.0)),
             ),
+            //  swipePercentageNeeded: .75,
             onSwipeCallback: onSwipeCallback,
           ),
         ],
